@@ -1,3 +1,9 @@
+export interface User {
+  name: string;
+  email: string;
+  avatarUrl: string;
+}
+
 export interface Item {
   id: string;
   name: string;
@@ -10,6 +16,7 @@ export interface Item {
 }
 
 export interface SystemData {
+  user: User;
   system: {
     status: "active" | "idle" | "disconnected";
     lastScanTimestamp: string;
@@ -18,6 +25,11 @@ export interface SystemData {
 }
 
 export const mockData: SystemData = {
+  user: {
+    name: "System Administrator",
+    email: "admin@rfid-corp.com",
+    avatarUrl: ""
+  },
   system: {
     status: "active",
     lastScanTimestamp: "2025-07-24T18:44:28Z"

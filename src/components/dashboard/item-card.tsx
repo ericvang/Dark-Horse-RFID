@@ -33,7 +33,7 @@ export function ItemCard({ item }: ItemCardProps) {
   return (
     <Card 
       className={cn(
-        "p-4 transition-all duration-200 hover:shadow-md",
+        "p-4 transition-all duration-200 hover:shadow-lg hover-scale",
         item.status === "missing" && "bg-warning-muted/30"
       )}
     >

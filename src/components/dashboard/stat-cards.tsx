@@ -49,7 +49,7 @@ export function StatCards({ stats }: StatCardsProps) {
       {cards.map((card, index) => {
         const Icon = card.icon;
         return (
-          <Card key={index} className="p-6 bg-card border-border">
+          <Card key={index} className="p-6 bg-card border-border hover-scale transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">
