@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Monitor, Package, Wifi, User, ChevronDown } from "lucide-react";
+import { Monitor, Package, Bell, BarChart3, Wifi, User, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserProfileMenu } from "@/components/ui/user-profile-menu";
@@ -7,8 +7,8 @@ import { type User as UserType } from "@/data/mock-data";
 
 interface SidebarProps {
   systemStatus: "active" | "idle" | "disconnected";
-  activePage: "dashboard" | "items";
-  onNavigate: (page: "dashboard" | "items") => void;
+  activePage: "dashboard" | "items" | "reminders" | "analytics";
+  onNavigate: (page: "dashboard" | "items" | "reminders" | "analytics") => void;
   user: UserType;
   onAccountSettings: () => void;
   onLogout: () => void;
@@ -37,7 +37,7 @@ export function Sidebar({
     setIsUserMenuOpen(!isUserMenuOpen);
   };
 
-  const handleNavigate = (page: "dashboard" | "items") => {
+  const handleNavigate = (page: "dashboard" | "items" | "reminders" | "analytics") => {
     onNavigate(page);
   };
 
@@ -109,6 +109,32 @@ export function Sidebar({
           >
             <Package className="w-4 h-4" />
             <span>Items</span>
+          </button>
+          <button
+            onClick={() => handleNavigate("reminders")}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full transition-colors",
+              activePage === "reminders"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            )}
+            aria-current={activePage === "reminders" ? "page" : undefined}
+          >
+            <Bell className="w-4 h-4" />
+            <span>Smart Reminders</span>
+          </button>
+          <button
+            onClick={() => handleNavigate("analytics")}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full transition-colors",
+              activePage === "analytics"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            )}
+            aria-current={activePage === "analytics" ? "page" : undefined}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Analytics</span>
           </button>
         </nav>
       </div>

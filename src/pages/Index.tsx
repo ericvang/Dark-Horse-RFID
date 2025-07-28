@@ -6,6 +6,8 @@ import { AlertBanner } from "@/components/dashboard/alert-banner";
 import { SearchBar } from "@/components/dashboard/search-bar";
 import { ItemGrid } from "@/components/dashboard/item-grid";
 import { Items } from "@/pages/Items";
+import { SmartReminders } from "@/pages/SmartReminders";
+import { Analytics } from "@/pages/Analytics";
 import { AccountModal } from "@/components/modals/account-modal";
 import { LogoutScreen } from "@/components/modals/logout-screen";
 import { mockData, type Item } from "@/data/mock-data";
@@ -15,7 +17,7 @@ const Index = () => {
   const [data, setData] = useState(mockData);
   const [searchQuery, setSearchQuery] = useState("");
   const [isScanning, setIsScanning] = useState(false);
-  const [activePage, setActivePage] = useState<"dashboard" | "items">("dashboard");
+  const [activePage, setActivePage] = useState<"dashboard" | "items" | "reminders" | "analytics">("dashboard");
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   const { toast } = useToast();
@@ -113,12 +115,16 @@ const Index = () => {
               searchQuery={searchQuery}
             />
           </>
-        ) : (
+        ) : activePage === "items" ? (
           <Items 
             items={data.items}
             lastScanTimestamp={data.system.lastScanTimestamp}
           />
-        )}
+        ) : activePage === "reminders" ? (
+          <SmartReminders />
+        ) : activePage === "analytics" ? (
+          <Analytics />
+        ) : null}
       </main>
 
       {/* Modals */}
