@@ -1,25 +1,18 @@
 import { useState, useMemo } from "react";
-import { Sidebar } from "@/components/dashboard/sidebar";
-import { Header } from "@/components/dashboard/header";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { AlertBanner } from "@/components/dashboard/alert-banner";
 import { SearchBar } from "@/components/dashboard/search-bar";
 import { ItemGrid } from "@/components/dashboard/item-grid";
-import { Items } from "@/pages/Items";
-import { SmartReminders } from "@/pages/SmartReminders";
-import { Analytics } from "@/pages/Analytics";
-import { AccountModal } from "@/components/modals/account-modal";
-import { LogoutScreen } from "@/components/modals/logout-screen";
-import { mockData, type Item } from "@/data/mock-data";
+import { Header } from "@/components/dashboard/header";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { mockData } from "@/data/mock-data";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [data, setData] = useState(mockData);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState("all");
   const [isScanning, setIsScanning] = useState(false);
-  const [activePage, setActivePage] = useState<"dashboard" | "items" | "reminders" | "analytics">("dashboard");
-  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
   const { toast } = useToast();
 
   // Calculate statistics
@@ -42,6 +35,39 @@ const Index = () => {
     
     return { essentialMissing, otherMissing };
   }, [data.items]);
+
+  // Filter items based on search and filter
+  const filteredItems = useMemo(() => {
+    let filtered = data.items;
+
+    // Apply search filter
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.name.toLowerCase().includes(searchLower) ||
+        item.description.toLowerCase().includes(searchLower) ||
+        item.category.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply type filter
+    switch (filterType) {
+      case "detected":
+        filtered = filtered.filter(item => item.status === "detected");
+        break;
+      case "missing":
+        filtered = filtered.filter(item => item.status === "missing");
+        break;
+      case "essential":
+        filtered = filtered.filter(item => item.isEssential);
+        break;
+      default:
+        // "all" - no additional filtering
+        break;
+    }
+
+    return filtered;
+  }, [data.items, searchQuery, filterType]);
 
   const handleManualScan = async () => {
     setIsScanning(true);
@@ -66,71 +92,44 @@ const Index = () => {
     });
   };
 
-  const handleLoginAgain = () => {
-    window.location.reload();
+  const handleFilterChange = (filter: string) => {
+    setFilterType(filter);
+    toast({
+      title: "Filter Applied",
+      description: `Showing ${filter === "all" ? "all items" : filter} items`,
+    });
   };
 
-  if (!isLoggedIn) {
-    return <LogoutScreen onLoginAgain={handleLoginAgain} />;
-  }
-
   return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar 
-        systemStatus={data.system.status} 
-        activePage={activePage}
-        onNavigate={setActivePage}
-        user={data.user}
-        onAccountSettings={() => setIsAccountModalOpen(true)}
-        onLogout={() => setIsLoggedIn(false)}
+    <AppLayout>
+      <Header 
+        lastScanTimestamp={data.system.lastScanTimestamp}
+        onManualScan={handleManualScan}
+        isScanning={isScanning}
       />
       
-      <main className="flex-1 p-8">
-        {activePage === "dashboard" ? (
-          <>
-            <Header 
-              lastScanTimestamp={data.system.lastScanTimestamp}
-              onManualScan={handleManualScan}
-              isScanning={isScanning}
-            />
-            
-            <StatCards stats={stats} />
-            
-            {stats.essentialMissing > 0 && (
-              <AlertBanner
-                totalItems={stats.totalItems}
-                detectedCount={stats.detected}
-                essentialMissingItems={missingItems.essentialMissing}
-                otherMissingItems={missingItems.otherMissing}
-              />
-            )}
-            
-            <SearchBar 
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-            />
-            
-            <ItemGrid 
-              items={data.items}
-              searchQuery={searchQuery}
-            />
-          </>
-        ) : activePage === "items" ? (
-          <Items />
-        ) : activePage === "reminders" ? (
-          <SmartReminders />
-        ) : activePage === "analytics" ? (
-          <Analytics />
-        ) : null}
-      </main>
+      <StatCards stats={stats} />
+      
+      {stats.essentialMissing > 0 && (
+        <AlertBanner
+          totalItems={stats.totalItems}
+          detectedCount={stats.detected}
+          essentialMissingItems={missingItems.essentialMissing}
+          otherMissingItems={missingItems.otherMissing}
+        />
+      )}
 
-      {/* Modals */}
-      <AccountModal
-        isOpen={isAccountModalOpen}
-        onClose={() => setIsAccountModalOpen(false)}
-        user={data.user}
+      <SearchBar 
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onFilterChange={handleFilterChange}
       />
-    </div>
+      
+      <ItemGrid 
+        items={filteredItems}
+        searchQuery={searchQuery}
+      />
+    </AppLayout>
   );
 };
 

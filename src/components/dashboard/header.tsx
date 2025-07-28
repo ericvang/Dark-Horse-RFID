@@ -17,9 +17,9 @@ export function Header({ lastScanTimestamp, onManualScan, isScanning }: HeaderPr
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Bag Monitor</h1>
+        <h1 className="text-3xl font-bold text-foreground">Bag Radar Dashboard</h1>
         <p className="text-muted-foreground">
-          Real-time RFID tracking - Last scan {formatTimestamp(lastScanTimestamp)}
+          Smart bag management system - Last scan {formatTimestamp(lastScanTimestamp)}
         </p>
       </div>
       

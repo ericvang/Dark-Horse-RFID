@@ -26,8 +26,8 @@ export interface SystemData {
 
 export const mockData: SystemData = {
   user: {
-    name: "System Administrator",
-    email: "admin@rfid-corp.com",
+    name: "Bag Radar User",
+    email: "user@bagradar.com",
     avatarUrl: ""
   },
   system: {

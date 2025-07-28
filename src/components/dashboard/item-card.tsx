@@ -1,7 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { CheckCircle, AlertCircle, Clock, Eye, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface Item {
   id: string;
@@ -21,6 +23,7 @@ interface ItemCardProps {
 export function ItemCard({ item }: ItemCardProps) {
   const statusIcon = item.status === "detected" ? CheckCircle : AlertCircle;
   const StatusIcon = statusIcon;
+  const { toast } = useToast();
   
   const categoryColors: Record<string, string> = {
     electronics: "bg-blue-100 text-blue-800",
@@ -30,12 +33,27 @@ export function ItemCard({ item }: ItemCardProps) {
     personal: "bg-orange-100 text-orange-800"
   };
 
+  const handleViewDetails = () => {
+    toast({
+      title: "Item Details",
+      description: `Viewing details for ${item.name}`,
+    });
+  };
+
+  const handleEditItem = () => {
+    toast({
+      title: "Edit Item",
+      description: `Edit functionality for ${item.name} will be available soon.`,
+    });
+  };
+
   return (
     <Card 
       className={cn(
-        "p-4 transition-all duration-200 hover:shadow-lg hover-scale",
+        "p-4 transition-all duration-200 hover:shadow-lg hover:scale-105 cursor-pointer",
         item.status === "missing" && "bg-warning-muted/30"
       )}
+      onClick={handleViewDetails}
     >
       <div className="flex items-start justify-between mb-3">
         {item.isEssential && (
@@ -79,6 +97,34 @@ export function ItemCard({ item }: ItemCardProps) {
         <p className="text-xs text-muted-foreground font-mono">
           RFID: {item.rfid}
         </p>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewDetails();
+            }}
+            className="flex items-center gap-1 text-xs h-7 px-2"
+          >
+            <Eye className="w-3 h-3" />
+            View
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditItem();
+            }}
+            className="flex items-center gap-1 text-xs h-7 px-2"
+          >
+            <Edit className="w-3 h-3" />
+            Edit
+          </Button>
+        </div>
       </div>
     </Card>
   );

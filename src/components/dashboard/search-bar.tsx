@@ -1,13 +1,22 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
+import { useState } from "react";
 
 interface SearchBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onFilterChange?: (filter: string) => void;
 }
 
-export function SearchBar({ searchQuery, onSearchChange }: SearchBarProps) {
+export function SearchBar({ searchQuery, onSearchChange, onFilterChange }: SearchBarProps) {
+  const [selectedFilter, setSelectedFilter] = useState("all");
+
+  const handleFilterChange = (value: string) => {
+    setSelectedFilter(value);
+    onFilterChange?.(value);
+  };
+
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
       <div className="relative flex-1">
@@ -20,12 +29,12 @@ export function SearchBar({ searchQuery, onSearchChange }: SearchBarProps) {
         />
       </div>
       
-      <Select defaultValue="all">
+      <Select value={selectedFilter} onValueChange={handleFilterChange}>
         <SelectTrigger className="w-full sm:w-32">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All</SelectItem>
+          <SelectItem value="all">All Items</SelectItem>
           <SelectItem value="detected">Detected</SelectItem>
           <SelectItem value="missing">Missing</SelectItem>
           <SelectItem value="essential">Essential</SelectItem>
