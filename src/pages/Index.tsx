@@ -116,10 +116,7 @@ const Index = () => {
             />
           </>
         ) : activePage === "items" ? (
-          <Items 
-            items={data.items}
-            lastScanTimestamp={data.system.lastScanTimestamp}
-          />
+          <Items />
         ) : activePage === "reminders" ? (
           <SmartReminders />
         ) : activePage === "analytics" ? (

@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const chartData = [
   { week: "Week 1", packed: 23, forgotten: 4 },
@@ -10,8 +12,11 @@ const chartData = [
 ];
 
 export function Analytics() {
+  const [selectedPeriod, setSelectedPeriod] = useState("This Month");
   const successRate = 85;
   const maxValue = Math.max(...chartData.map(d => d.packed));
+
+  const periods = ["This Week", "This Month", "Last Month", "Last 3 Months", "This Year"];
 
   return (
     <div className="space-y-6">
@@ -29,10 +34,25 @@ export function Analytics() {
       {/* Performance Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-foreground">Packing Performance</h2>
-        <Button variant="outline" className="gap-2">
-          This Month
-          <ChevronDown className="w-4 h-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              {selectedPeriod}
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {periods.map((period) => (
+              <DropdownMenuItem 
+                key={period}
+                onClick={() => setSelectedPeriod(period)}
+                className={selectedPeriod === period ? "bg-accent" : ""}
+              >
+                {period}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Success Rate Chart */}
