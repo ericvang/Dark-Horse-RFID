@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DarkHorseRadar</string>
+    <string name="title_activity_main">DarkHorseRadar</string>
+    <string name="package_name">com.darkhorseradar.app</string>
+    <string name="custom_url_scheme">com.darkhorseradar.app</string>
+</resources>

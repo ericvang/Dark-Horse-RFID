@@ -1,0 +1,151 @@
+import { Item, User, Reminder, AnalyticsData } from '../types';
+
+export const mockItems: Item[] = [
+  {
+    id: '1',
+    name: 'Laptop',
+    description: 'MacBook Pro 16-inch with M2 chip',
+    rfid: 'RFID-001-ABC123',
+    category: 'electronics',
+    isEssential: true,
+    status: 'detected',
+    lastSeen: '2024-01-15T10:30:00Z',
+    location: 'Office',
+  },
+  {
+    id: '2',
+    name: 'Passport',
+    description: 'US Passport - Expires 2029',
+    rfid: 'RFID-002-DEF456',
+    category: 'documents',
+    isEssential: true,
+    status: 'missing',
+    lastSeen: '2024-01-10T14:20:00Z',
+    location: 'Home',
+  },
+  {
+    id: '3',
+    name: 'Keys',
+    description: 'House and car keys with keychain',
+    rfid: 'RFID-003-GHI789',
+    category: 'personal',
+    isEssential: true,
+    status: 'detected',
+    lastSeen: '2024-01-15T08:45:00Z',
+    location: 'Pocket',
+  },
+  {
+    id: '4',
+    name: 'Wallet',
+    description: 'Leather wallet with cards and cash',
+    rfid: 'RFID-004-JKL012',
+    category: 'personal',
+    isEssential: true,
+    status: 'detected',
+    lastSeen: '2024-01-15T09:15:00Z',
+    location: 'Backpack',
+  },
+  {
+    id: '5',
+    name: 'Phone Charger',
+    description: 'USB-C fast charging cable',
+    rfid: 'RFID-005-MNO345',
+    category: 'electronics',
+    isEssential: false,
+    status: 'detected',
+    lastSeen: '2024-01-14T22:30:00Z',
+    location: 'Bedroom',
+  },
+  {
+    id: '6',
+    name: 'Water Bottle',
+    description: 'Stainless steel 32oz water bottle',
+    rfid: 'RFID-006-PQR678',
+    category: 'personal',
+    isEssential: false,
+    status: 'missing',
+    lastSeen: '2024-01-12T16:45:00Z',
+    location: 'Gym',
+  },
+];
+
+export const mockUser: User = {
+  id: '1',
+  name: 'John Doe',
+  email: 'john.doe@example.com',
+  avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+  preferences: {
+    notifications: true,
+    theme: 'system',
+    accessibility: {
+      highContrast: false,
+      largeText: false,
+      reduceMotion: false,
+    },
+  },
+};
+
+export const mockReminders: Reminder[] = [
+  {
+    id: '1',
+    title: 'Check Passport Expiry',
+    description: 'Verify passport expiration date',
+    type: 'check',
+    frequency: 'monthly',
+    nextDue: '2024-02-15T00:00:00Z',
+    isActive: true,
+    itemId: '2',
+  },
+  {
+    id: '2',
+    title: 'Backup Laptop',
+    description: 'Create backup of important files',
+    type: 'maintenance',
+    frequency: 'weekly',
+    nextDue: '2024-01-22T00:00:00Z',
+    isActive: true,
+    itemId: '1',
+  },
+  {
+    id: '3',
+    title: 'Replace Water Bottle',
+    description: 'Consider replacing old water bottle',
+    type: 'replacement',
+    frequency: 'monthly',
+    nextDue: '2024-02-12T00:00:00Z',
+    isActive: true,
+    itemId: '6',
+  },
+];
+
+export const mockAnalytics: AnalyticsData = {
+  totalItems: 6,
+  detectedItems: 4,
+  missingItems: 2,
+  essentialItems: 4,
+  recentActivity: [
+    {
+      id: '1',
+      action: 'Item detected',
+      itemName: 'Laptop',
+      timestamp: '2024-01-15T10:30:00Z',
+    },
+    {
+      id: '2',
+      action: 'Item missing',
+      itemName: 'Passport',
+      timestamp: '2024-01-10T14:20:00Z',
+    },
+    {
+      id: '3',
+      action: 'Item detected',
+      itemName: 'Keys',
+      timestamp: '2024-01-15T08:45:00Z',
+    },
+  ],
+  categoryBreakdown: [
+    { category: 'electronics', count: 2, percentage: 33.3 },
+    { category: 'personal', count: 3, percentage: 50 },
+    { category: 'documents', count: 1, percentage: 16.7 },
+  ],
+}; 
