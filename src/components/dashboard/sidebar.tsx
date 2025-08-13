@@ -10,8 +10,8 @@ import { getAriaLabel, getAriaDescription } from "@/lib/accessibility";
 
 interface SidebarProps {
   systemStatus: "active" | "idle" | "disconnected";
-  activePage: "dashboard" | "items" | "reminders" | "analytics" | "profile";
-  onNavigate: (page: "dashboard" | "items" | "reminders" | "analytics" | "profile") => void;
+  activePage: "dashboard" | "items" | "presets" | "reminders" | "analytics" | "profile";
+  onNavigate: (page: "dashboard" | "items" | "presets" | "reminders" | "analytics" | "profile") => void;
   user: UserType;
   onAccountSettings: () => void;
   onLogout: () => void;
@@ -40,7 +40,7 @@ export function Sidebar({
     setIsUserMenuOpen(!isUserMenuOpen);
   };
 
-  const handleNavigate = (page: "dashboard" | "items" | "reminders" | "analytics" | "profile") => {
+  const handleNavigate = (page: "dashboard" | "items" | "presets" | "reminders" | "analytics" | "profile") => {
     onNavigate(page);
   };
 
@@ -80,6 +80,12 @@ export function Sidebar({
       label: "Items",
       icon: Package2,
       description: "Manage tracked items"
+    },
+    {
+      id: "presets",
+      label: "Event Presets",
+      icon: Package,
+      description: "Quick setup for common events"
     },
     {
       id: "reminders",
@@ -132,7 +138,7 @@ export function Sidebar({
                     "flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full transition-colors justify-start",
                     isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   )}
-                  onClick={() => onNavigate(item.id as "dashboard" | "items" | "reminders" | "analytics" | "profile")}
+                  onClick={() => onNavigate(item.id as "dashboard" | "items" | "presets" | "reminders" | "analytics" | "profile")}
                   aria-label={getAriaLabel('link', item.label.toLowerCase())}
                   aria-describedby={`${item.id}-description`}
                   aria-current={isActive ? "page" : undefined}

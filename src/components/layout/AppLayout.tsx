@@ -29,6 +29,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         return "dashboard";
       case "/items":
         return "items";
+      case "/presets":
+        return "presets";
       case "/reminders":
         return "reminders";
       case "/analytics":
