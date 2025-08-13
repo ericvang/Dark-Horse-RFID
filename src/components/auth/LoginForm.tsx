@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,7 @@ export function LoginForm({ onToggleMode, isSignUp = false }: LoginFormProps) {
   
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +40,7 @@ export function LoginForm({ onToggleMode, isSignUp = false }: LoginFormProps) {
           title: 'Account created!',
           description: 'Welcome to Dark Horse RFID Tracker',
         });
+        navigate('/dashboard');
       } else {
         console.log('Signing in...');
         await signIn(email, password);
@@ -46,6 +49,7 @@ export function LoginForm({ onToggleMode, isSignUp = false }: LoginFormProps) {
           title: 'Welcome back!',
           description: 'Successfully signed in',
         });
+        navigate('/dashboard');
       }
     } catch (error: any) {
       console.error('Authentication error:', error);
@@ -70,6 +74,7 @@ export function LoginForm({ onToggleMode, isSignUp = false }: LoginFormProps) {
         title: 'Welcome!',
         description: 'Successfully signed in with Google',
       });
+      navigate('/dashboard');
     } catch (error: any) {
       toast({
         title: 'Google sign-in failed',

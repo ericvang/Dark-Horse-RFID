@@ -25,7 +25,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Map URL paths to sidebar page states
   const getActivePage = () => {
     switch (location.pathname) {
-      case "/":
+      case "/dashboard":
         return "dashboard";
       case "/items":
         return "items";
@@ -48,7 +48,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     
     switch (page) {
       case "dashboard":
-        navigate("/");
+        navigate("/dashboard");
         break;
       case "items":
         navigate("/items");

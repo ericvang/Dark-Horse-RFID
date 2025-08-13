@@ -1,6 +1,6 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { LoginForm } from './LoginForm';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProtectedRouteProps {
@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const navigate = useNavigate();
 
   // Show loading skeleton while checking authentication
   if (loading) {
@@ -32,14 +32,16 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Show login form if user is not authenticated
+  // Redirect to login if user is not authenticated
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
+
+  // Don't render anything while redirecting
   if (!user) {
-    return (
-      <LoginForm 
-        isSignUp={isSignUp}
-        onToggleMode={() => setIsSignUp(!isSignUp)}
-      />
-    );
+    return null;
   }
 
   // User is authenticated, show the protected content
