@@ -18,9 +18,11 @@ interface Item {
 
 interface ItemCardProps {
   item: Item;
+  onViewItem: (item: Item) => void;
+  onEditItem: (item: Item) => void;
 }
 
-export function ItemCard({ item }: ItemCardProps) {
+export function ItemCard({ item, onViewItem, onEditItem }: ItemCardProps) {
   const statusIcon = item.status === "detected" ? CheckCircle : AlertCircle;
   const StatusIcon = statusIcon;
   const { toast } = useToast();
@@ -34,17 +36,11 @@ export function ItemCard({ item }: ItemCardProps) {
   };
 
   const handleViewDetails = () => {
-    toast({
-      title: "Item Details",
-      description: `Viewing details for ${item.name}`,
-    });
+    onViewItem(item);
   };
 
   const handleEditItem = () => {
-    toast({
-      title: "Edit Item",
-      description: `Edit functionality for ${item.name} will be available soon.`,
-    });
+    onEditItem(item);
   };
 
   return (

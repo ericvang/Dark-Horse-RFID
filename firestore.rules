@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read/write their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Users can read/write their own items (more permissive for development)
+    match /items/{itemId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // RFID scan history - users can read/write their own scans
+    match /rfid_scans/{scanId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Analytics data - users can read/write their own analytics
+    match /analytics/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Public read access for app configuration (if needed)
+    match /config/{document} {
+      allow read: if true;
+      allow write: if false; // Only admins can write config
+    }
+  }
+}

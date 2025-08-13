@@ -15,9 +15,11 @@ interface Item {
 interface ItemGridProps {
   items: Item[];
   searchQuery: string;
+  onViewItem: (item: Item) => void;
+  onEditItem: (item: Item) => void;
 }
 
-export function ItemGrid({ items, searchQuery }: ItemGridProps) {
+export function ItemGrid({ items, searchQuery, onViewItem, onEditItem }: ItemGridProps) {
   const filteredItems = items.filter(item => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -46,7 +48,7 @@ export function ItemGrid({ items, searchQuery }: ItemGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {filteredItems.map((item) => (
-        <ItemCard key={item.id} item={item} />
+        <ItemCard key={item.id} item={item} onViewItem={onViewItem} onEditItem={onEditItem} />
       ))}
     </div>
   );

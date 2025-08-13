@@ -59,15 +59,15 @@ export function MobileItemsView({
   // Always render the mobile view when this component is called
   // The parent component handles the mobile detection logic
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 mobile-safe-area">
       {items.map((item) => (
-        <Card key={item.id} className="mobile-items-card">
+        <Card key={item.id} className="mobile-items-card touch-feedback">
           <div className="flex items-start gap-3">
             {/* Checkbox */}
             <Checkbox
               checked={selectedItems.includes(item.id)}
               onCheckedChange={() => onToggleSelection(item.id)}
-              className="mt-1 flex-shrink-0"
+              className="mt-1 flex-shrink-0 mobile-touch-target"
             />
             
             {/* Item Content */}
@@ -100,21 +100,21 @@ export function MobileItemsView({
               {/* Item Details Grid */}
               <div className="mobile-items-details">
                 <div className="mobile-items-detail-row">
-                  <Tag className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Category:</span>
-                  <span className="font-medium capitalize">{item.category}</span>
+                  <Tag className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground text-xs">Category:</span>
+                  <span className="font-medium capitalize text-sm">{item.category}</span>
                 </div>
                 
                 <div className="mobile-items-detail-row">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Last Seen:</span>
-                  <span className="font-medium">{item.lastSeen}</span>
+                  <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground text-xs">Last Seen:</span>
+                  <span className="font-medium text-sm">{item.lastSeen}</span>
                 </div>
                 
                 <div className="mobile-items-detail-row">
-                  <Wifi className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">RFID:</span>
-                  <span className="mobile-items-rfid-tag">
+                  <Wifi className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground text-xs">RFID:</span>
+                  <span className="mobile-items-rfid-tag text-xs">
                     {item.rfid}
                   </span>
                 </div>
@@ -133,28 +133,28 @@ export function MobileItemsView({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleItemAction('view', item)}
-                  className="mobile-items-action-button"
+                  className="mobile-items-action-button touch-feedback"
                 >
                   <Eye className="w-4 h-4" />
-                  View
+                  <span className="mobile-only">View</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleItemAction('edit', item)}
-                  className="mobile-items-action-button"
+                  className="mobile-items-action-button touch-feedback"
                 >
                   <Edit className="w-4 h-4" />
-                  Edit
+                  <span className="mobile-only">Edit</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleItemAction('delete', item)}
-                  className="mobile-items-action-button text-destructive hover:text-destructive"
+                  className="mobile-items-action-button text-destructive hover:text-destructive touch-feedback"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Delete
+                  <span className="mobile-only">Delete</span>
                 </Button>
               </div>
             </div>

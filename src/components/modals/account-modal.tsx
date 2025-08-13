@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { type User as UserType } from "@/data/mock-data";
+import { type User as UserType } from "@/types";
 
 interface AccountModalProps {
   isOpen: boolean;

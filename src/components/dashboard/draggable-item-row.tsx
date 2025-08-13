@@ -55,14 +55,14 @@ export function DraggableItemRow({
       style={style}
       className={`${isDragging ? 'bg-muted/50' : ''} hover:bg-muted/30 transition-colors`}
     >
-      <td className="p-4">
+      <td className="p-1">
         <Checkbox 
           checked={isSelected}
           onCheckedChange={() => onToggleSelection(item.id)}
         />
       </td>
-      <td className="p-4">
-        <div className="flex items-center gap-3">
+      <td className="p-1">
+        <div className="flex items-center justify-center">
           <button
             {...attributes}
             {...listeners}
@@ -71,86 +71,85 @@ export function DraggableItemRow({
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </button>
-          <div className="space-y-1">
-            <div className="font-medium text-foreground">{item.name}</div>
-            <div className="text-sm text-muted-foreground">{item.description}</div>
-          </div>
         </div>
       </td>
-      <td className="p-4">
-        <code className="text-xs bg-muted px-2 py-1 rounded">
+      <td className="p-1">
+        <div className="space-y-1">
+          <div className="font-medium text-foreground truncate text-sm">{item.name}</div>
+          <div className="text-xs text-muted-foreground truncate">{item.description}</div>
+        </div>
+      </td>
+      <td className="p-1">
+        <code className="text-xs bg-muted px-1 py-0.5 rounded font-mono truncate block w-full">
           {item.rfid}
         </code>
       </td>
-      <td className="p-4">
-        <Badge variant="outline">{item.category}</Badge>
+      <td className="p-1">
+        <Badge variant="outline" className="truncate block w-full text-xs">{item.category}</Badge>
       </td>
-      <td className="p-4">
-        <div className="flex items-center gap-2">
+      <td className="p-1">
+        <div className="flex flex-col gap-1">
           <Badge
             variant={item.status === "detected" ? "secondary" : "destructive"}
+            className="text-xs truncate w-full"
           >
             {item.status === "detected" ? "Detected" : "Missing"}
           </Badge>
           {item.isEssential && (
-            <Badge variant="destructive" className="text-xs">
+            <Badge variant="destructive" className="text-xs truncate w-full">
               Essential
             </Badge>
           )}
         </div>
       </td>
-      <td className="p-4 text-sm text-muted-foreground">
-        {item.lastSeen}
+      <td className="p-1">
+        <div className="text-xs text-muted-foreground text-center">
+          {item.isEssential ? "Yes" : "No"}
+        </div>
       </td>
-      <td className="p-4">
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => onView(item)}
-            aria-label={`View ${item.name}`}
-            className="hover:bg-muted h-8 w-8"
+      <td className="p-1">
+        <div className="text-xs text-muted-foreground truncate">
+          {new Date(item.lastSeen).toLocaleDateString()}
+        </div>
+      </td>
+      <td className="p-1">
+        <div className="flex items-center gap-1 justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              console.log('View button clicked for item:', item);
+              onView(item);
+            }}
+            className="h-8 w-8 p-0"
+            title="View details"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => onEdit(item)}
-            aria-label={`Edit ${item.name}`}
-            className="hover:bg-muted h-8 w-8"
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              console.log('Edit button clicked for item:', item);
+              onEdit(item);
+            }}
+            className="h-8 w-8 p-0"
+            title="Edit item"
           >
-            <Edit className="w-4 h-4" />
+            <Edit className="h-4 w-4" />
           </Button>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                aria-label={`Delete ${item.name}`}
-                className="hover:bg-destructive/10 hover:text-destructive h-8 w-8"
-              >
-                <Trash className="w-4 h-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Delete Item</DialogTitle>
-                <DialogDescription>
-                  Are you sure you want to delete "{item.name}"? This action cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex justify-end gap-2 mt-4">
-                <Button variant="outline">Cancel</Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={() => onDelete(item.id)}
-                >
-                  Delete
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              console.log('Delete button clicked for item:', item);
+              onDelete(item.id);
+            }}
+            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+            title="Delete item"
+          >
+            <Trash className="h-4 w-4" />
+          </Button>
         </div>
       </td>
     </tr>

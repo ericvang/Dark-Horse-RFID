@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Bell, Clock, Calendar, MapPin, Plus, Trash2, Edit } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, Clock, Calendar, MapPin, Plus, Trash2, Edit, Sparkles, Target, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 interface Reminder {
   id: string;
@@ -34,6 +39,7 @@ interface LocationReminder {
 }
 
 export function SmartReminders() {
+  const { user } = useAuth();
   const [allNotifications, setAllNotifications] = useState(true);
   const [activeTab, setActiveTab] = useState<'time' | 'event' | 'location'>('time');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -47,66 +53,72 @@ export function SmartReminders() {
     radius: ""
   });
   const { toast } = useToast();
-  const [reminders, setReminders] = useState<Reminder[]>([
-    {
-      id: "1",
-      name: "Soccer Kit",
-      time: "3:30 PM",
-      days: "Mon, Wed, Fri",
-      enabled: true,
-      type: 'time'
-    },
-    {
-      id: "2", 
-      name: "School Backpack",
-      time: "7:00 AM",
-      days: "Mon-Fri",
-      enabled: true,
-      type: 'time'
-    },
-    {
-      id: "3",
-      name: "Gym Bag",
-      time: "5:00 PM", 
-      days: "Tue, Thu",
-      enabled: false,
-      type: 'time'
-    }
-  ]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [eventReminders, setEventReminders] = useState<EventReminder[]>([]);
+  const [locationReminders, setLocationReminders] = useState<LocationReminder[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [eventReminders, setEventReminders] = useState<EventReminder[]>([
-    {
-      id: "e1",
-      name: "Soccer Practice",
-      event: "Weekly Training",
-      itemsNeeded: ["Soccer Kit", "Water Bottle", "Cleats"],
-      enabled: true
-    },
-    {
-      id: "e2",
-      name: "Business Meeting",
-      event: "Client Presentation",
-      itemsNeeded: ["Laptop", "Charger", "Presentation Files"],
-      enabled: true
+  // Load reminders from Firebase
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
     }
-  ]);
 
-  const [locationReminders, setLocationReminders] = useState<LocationReminder[]>([
-    {
-      id: "l1",
-      name: "Gym Check",
-      location: "Local Fitness Center",
-      radius: "100m",
-      enabled: true
-    },
-    {
-      id: "l2",
-      name: "Office Arrival",
-      location: "Downtown Office",
-      radius: "200m", 
-      enabled: false
-    }
-  ]);
+    const remindersRef = collection(db, 'reminders');
+    const unsubscribe = onSnapshot(remindersRef, (snapshot) => {
+      const timeReminders: Reminder[] = [];
+      const eventRemindersData: EventReminder[] = [];
+      const locationRemindersData: LocationReminder[] = [];
+
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.userId === user.uid) {
+          if (data.type === 'time') {
+            timeReminders.push({ id: doc.id, ...data } as Reminder);
+          } else if (data.type === 'event') {
+            eventRemindersData.push({ id: doc.id, ...data } as EventReminder);
+          } else if (data.type === 'location') {
+            locationRemindersData.push({ id: doc.id, ...data } as LocationReminder);
+          }
+        }
+      });
+
+      setReminders(timeReminders);
+      setEventReminders(eventRemindersData);
+      setLocationReminders(locationRemindersData);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error loading reminders:', error);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user]);
+
+  // Loading state with clean skeleton
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <div className="h-8 bg-muted rounded w-48"></div>
+            <div className="h-4 bg-muted rounded w-64"></div>
+          </div>
+          
+          <div className="grid gap-4 md:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="p-6 space-y-4">
+                <div className="h-4 bg-muted rounded w-24"></div>
+                <div className="h-3 bg-muted rounded w-32"></div>
+                <div className="h-3 bg-muted rounded w-28"></div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   const toggleReminder = (id: string) => {
     setReminders(prev => prev.map(reminder => 
@@ -195,287 +207,317 @@ export function SmartReminders() {
 
     toast({
       title: "Reminder Created",
-      description: `${newReminder.name} reminder has been created successfully.`,
+      description: "Your reminder has been set successfully!",
     });
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setNewReminder(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const getCurrentReminders = () => {
+    switch (activeTab) {
+      case 'time':
+        return reminders;
+      case 'event':
+        return eventReminders;
+      case 'location':
+        return locationReminders;
+      default:
+        return [];
+    }
   };
+
+  const getEmptyStateContent = () => {
+    switch (activeTab) {
+      case 'time':
+        return {
+          icon: Clock,
+          title: "No Time-Based Reminders",
+          description: "Set up reminders for specific times and days to never forget important items.",
+          action: "Create Time Reminder"
+        };
+      case 'event':
+        return {
+          icon: Calendar,
+          title: "No Event Reminders",
+          description: "Create reminders tied to specific events to ensure you have everything you need.",
+          action: "Create Event Reminder"
+        };
+      case 'location':
+        return {
+          icon: MapPin,
+          title: "No Location Reminders",
+          description: "Set up location-based reminders to get notified when you're near specific places.",
+          action: "Create Location Reminder"
+        };
+      default:
+        return {
+          icon: Bell,
+          title: "No Reminders",
+          description: "Get started by creating your first reminder.",
+          action: "Create Reminder"
+        };
+    }
+  };
+
+  const emptyState = getEmptyStateContent();
+  const currentReminders = getCurrentReminders();
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Smart Reminders</h1>
-            <p className="text-muted-foreground">Set up intelligent reminders for your items</p>
+        {/* Clean Tech Header */}
+        <div className="border-b border-border pb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-slate-100 rounded-lg">
+              <Bell className="h-6 w-6 text-slate-700" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Smart Reminders</h1>
+              <p className="text-muted-foreground text-lg">
+                Intelligent notification system for your RFID items
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* All Notifications Toggle */}
-        <Card className="p-6">
+        {/* Global Notification Toggle */}
+        <Card className="p-6 border border-border bg-card">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Bell className="w-5 h-5 text-primary" />
+              <div className="p-2 bg-slate-100 rounded-lg">
+                <Zap className="h-5 w-5 text-slate-700" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">All Notifications</h3>
-                <p className="text-sm text-muted-foreground">Turn off to mute all pack reminders and alerts</p>
+                <h3 className="font-semibold text-foreground">Global Notifications</h3>
+                <p className="text-sm text-muted-foreground">Enable or disable all reminder notifications</p>
               </div>
             </div>
-            <Switch 
-              checked={allNotifications} 
+            <Switch
+              checked={allNotifications}
               onCheckedChange={setAllNotifications}
+              className="data-[state=checked]:bg-primary"
             />
           </div>
         </Card>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-8 border-b border-border">
-          <button 
-            onClick={() => setActiveTab('time')}
-            className={`flex items-center gap-2 pb-3 border-b-2 transition-colors ${
-              activeTab === 'time' 
-                ? 'border-primary text-primary' 
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            Time
-          </button>
-          <button 
-            onClick={() => setActiveTab('event')}
-            className={`flex items-center gap-2 pb-3 border-b-2 transition-colors ${
-              activeTab === 'event' 
-                ? 'border-primary text-primary' 
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            Event
-          </button>
-          <button 
-            onClick={() => setActiveTab('location')}
-            className={`flex items-center gap-2 pb-3 border-b-2 transition-colors ${
-              activeTab === 'location' 
-                ? 'border-primary text-primary' 
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <MapPin className="w-4 h-4" />
-            Location
-          </button>
+        {/* Tab Navigation - Clean Tech Style */}
+        <div className="border-b border-border">
+          <div className="flex space-x-8">
+            {[
+              { id: 'time', label: 'Time-Based', icon: Clock },
+              { id: 'event', label: 'Event-Based', icon: Calendar },
+              { id: 'location', label: 'Location-Based', icon: MapPin }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-2 pb-3 border-b-2 transition-colors ${
+                    isActive
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Dynamic Content Based on Active Tab */}
-        {activeTab === 'time' && (
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Time-based Reminders</h2>
-            <div className="space-y-4">
-              {reminders.map((reminder) => (
-                <Card key={reminder.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-foreground">{reminder.name}</h3>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                        <Clock className="w-4 h-4" />
-                        {reminder.time}, {reminder.days}
+        {/* Content Area */}
+        <div className="space-y-6">
+          {/* Action Bar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">
+                {currentReminders.length} {activeTab === 'time' ? 'reminders' : activeTab === 'event' ? 'events' : 'locations'}
+              </Badge>
+              {currentReminders.length > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  {currentReminders.filter(r => r.enabled).length} active
+                </Badge>
+              )}
+            </div>
+            
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Reminder
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create New {activeTab === 'time' ? 'Time' : activeTab === 'event' ? 'Event' : 'Location'} Reminder</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Reminder Name</label>
+                    <Input
+                      placeholder="e.g., Soccer Practice, Gym Bag"
+                      value={newReminder.name}
+                      onChange={(e) => setNewReminder(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  
+                  {activeTab === 'time' && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium">Time</label>
+                        <Input
+                          type="time"
+                          value={newReminder.time}
+                          onChange={(e) => setNewReminder(prev => ({ ...prev, time: e.target.value }))}
+                        />
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => deleteReminder(reminder.id)}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                      <Switch 
-                        checked={reminder.enabled} 
-                        onCheckedChange={() => toggleReminder(reminder.id)}
+                      <div>
+                        <label className="text-sm font-medium">Days</label>
+                        <Input
+                          placeholder="e.g., Mon, Wed, Fri or Mon-Fri"
+                          value={newReminder.days}
+                          onChange={(e) => setNewReminder(prev => ({ ...prev, days: e.target.value }))}
+                        />
+                      </div>
+                    </>
+                  )}
+                  
+                  {activeTab === 'event' && (
+                    <div>
+                      <label className="text-sm font-medium">Event</label>
+                      <Input
+                        placeholder="e.g., Weekly Training, Business Meeting"
+                        value={newReminder.event}
+                        onChange={(e) => setNewReminder(prev => ({ ...prev, event: e.target.value }))}
                       />
                     </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'event' && (
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Event-based Reminders</h2>
-            <div className="space-y-4">
-              {eventReminders.map((reminder) => (
-                <Card key={reminder.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-foreground">{reminder.name}</h3>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                        <Calendar className="w-4 h-4" />
-                        {reminder.event}
+                  )}
+                  
+                  {activeTab === 'location' && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium">Location</label>
+                        <Input
+                          placeholder="e.g., Local Fitness Center, Downtown Office"
+                          value={newReminder.location}
+                          onChange={(e) => setNewReminder(prev => ({ ...prev, location: e.target.value }))}
+                        />
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Items: {reminder.itemsNeeded.join(', ')}
+                      <div>
+                        <label className="text-sm font-medium">Radius</label>
+                        <Input
+                          placeholder="e.g., 100m, 200m"
+                          value={newReminder.radius}
+                          onChange={(e) => setNewReminder(prev => ({ ...prev, radius: e.target.value }))}
+                        />
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => deleteEventReminder(reminder.id)}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                      <Switch 
-                        checked={reminder.enabled} 
-                        onCheckedChange={() => toggleEventReminder(reminder.id)}
-                      />
-                    </div>
+                    </>
+                  )}
+                  
+                  <div className="flex gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleCreateReminder}
+                      className="flex-1"
+                    >
+                      Create Reminder
+                    </Button>
                   </div>
-                </Card>
-              ))}
-            </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
-        )}
 
-        {activeTab === 'location' && (
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Location-based Reminders</h2>
-            <div className="space-y-4">
-              {locationReminders.map((reminder) => (
-                <Card key={reminder.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-foreground">{reminder.name}</h3>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                        <MapPin className="w-4 h-4" />
-                        {reminder.location} (within {reminder.radius})
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => deleteLocationReminder(reminder.id)}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                      <Switch 
-                        checked={reminder.enabled} 
-                        onCheckedChange={() => toggleLocationReminder(reminder.id)}
-                      />
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Add Reminder Button */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full" variant="outline">
-              <Plus className="w-4 h-4 mr-2" />
-              Add {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Reminder
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Reminder</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground">Name</label>
-                <Input 
-                  placeholder="Reminder name" 
-                  className="mt-1"
-                  value={newReminder.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                />
+          {/* Reminders List */}
+          {currentReminders.length === 0 ? (
+            <Card className="p-12 text-center border border-border">
+              <div className="mx-auto w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center mb-6">
+                <emptyState.icon className="h-8 w-8 text-slate-600" />
               </div>
-              {activeTab === 'time' && (
-                <>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Time</label>
-                    <Input 
-                      type="time" 
-                      className="mt-1"
-                      value={newReminder.time}
-                      onChange={(e) => handleInputChange('time', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Days</label>
-                    <Input 
-                      placeholder="Mon, Wed, Fri" 
-                      className="mt-1"
-                      value={newReminder.days}
-                      onChange={(e) => handleInputChange('days', e.target.value)}
-                    />
-                  </div>
-                </>
-              )}
-              {activeTab === 'event' && (
-                <>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Event</label>
-                    <Input 
-                      placeholder="Event name" 
-                      className="mt-1"
-                      value={newReminder.event}
-                      onChange={(e) => handleInputChange('event', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Items Needed</label>
-                    <Input 
-                      placeholder="Item1, Item2, Item3" 
-                      className="mt-1"
-                      value={newReminder.itemsNeeded}
-                      onChange={(e) => handleInputChange('itemsNeeded', e.target.value)}
-                    />
-                  </div>
-                </>
-              )}
-              {activeTab === 'location' && (
-                <>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Location</label>
-                    <Input 
-                      placeholder="Location name" 
-                      className="mt-1"
-                      value={newReminder.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Radius</label>
-                    <Input 
-                      placeholder="100m" 
-                      className="mt-1"
-                      value={newReminder.radius}
-                      onChange={(e) => handleInputChange('radius', e.target.value)}
-                    />
-                  </div>
-                </>
-              )}
-              <Button className="w-full" onClick={handleCreateReminder}>
-                Create Reminder
+              <h3 className="text-xl font-semibold mb-2">{emptyState.title}</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                {emptyState.description}
+              </p>
+              <Button
+                onClick={() => setIsDialogOpen(true)}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {emptyState.action}
               </Button>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {currentReminders.map((reminder) => (
+                <Card key={reminder.id} className="p-4 border border-border hover:border-border/60 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-slate-100 rounded-lg">
+                        {activeTab === 'time' && <Clock className="h-4 w-4 text-slate-700" />}
+                        {activeTab === 'event' && <Calendar className="h-4 w-4 text-slate-700" />}
+                        {activeTab === 'location' && <MapPin className="h-4 w-4 text-slate-700" />}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-foreground">{reminder.name}</h3>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          {activeTab === 'time' && (
+                            <>
+                              <span>{reminder.time}</span>
+                              <span>•</span>
+                              <span>{reminder.days}</span>
+                            </>
+                          )}
+                          {activeTab === 'event' && (
+                            <span>{(reminder as EventReminder).event}</span>
+                          )}
+                          {activeTab === 'location' && (
+                            <>
+                              <span>{(reminder as LocationReminder).location}</span>
+                              <span>•</span>
+                              <span>{(reminder as LocationReminder).radius}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={reminder.enabled}
+                        onCheckedChange={() => {
+                          if (activeTab === 'time') toggleReminder(reminder.id);
+                          if (activeTab === 'event') toggleEventReminder(reminder.id);
+                          if (activeTab === 'location') toggleLocationReminder(reminder.id);
+                        }}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (activeTab === 'time') deleteReminder(reminder.id);
+                          if (activeTab === 'event') deleteEventReminder(reminder.id);
+                          if (activeTab === 'location') deleteLocationReminder(reminder.id);
+                        }}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
-          </DialogContent>
-        </Dialog>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

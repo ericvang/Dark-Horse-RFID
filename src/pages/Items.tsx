@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
-import { Search, Filter, MoreHorizontal, Eye, Edit, Trash, ChevronLeft, ChevronRight, Plus, GripVertical } from "lucide-react";
-import { mockData } from "@/data/mock-data";
+import { useState, useMemo, useEffect } from "react";
+import { Search, Filter, MoreHorizontal, Eye, Edit, Trash, ChevronLeft, ChevronRight, Plus, GripVertical, Package, Sparkles, Target, Zap, AlertTriangle } from "lucide-react";
+import { useFirebaseItems } from "@/hooks/useFirebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,13 +45,25 @@ interface FilterState {
 }
 
 export function Items() {
-  const [items, setItems] = useState(mockData.items);
+  // ALL HOOKS MUST BE CALLED FIRST, BEFORE ANY CONDITIONAL LOGIC
+  const { user } = useAuth();
+  const { items, loading, error, addItem, updateItem, deleteItem } = useFirebaseItems(user?.uid);
+  
+  // Debug logging
+  console.log('Items component - user:', user);
+  console.log('Items component - userId:', user?.uid);
+  console.log('Items component - user type:', typeof user);
+  console.log('Items component - user keys:', user ? Object.keys(user) : 'null');
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [viewingItem, setViewingItem] = useState<any>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [itemOrder, setItemOrder] = useState<string[]>([]);
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>({
     categories: [],
     statuses: [],
@@ -71,15 +84,58 @@ export function Items() {
     })
   );
 
+  // Initialize item order when items change
+  useEffect(() => {
+    if (items && items.length > 0) {
+      // Try to load saved order from localStorage
+      const savedOrder = localStorage.getItem('darkhorse-items-order');
+      if (savedOrder) {
+        try {
+          const parsedOrder = JSON.parse(savedOrder);
+          // Only use saved order if it contains valid item IDs
+          if (Array.isArray(parsedOrder) && parsedOrder.every(id => items.some(item => item.id === id))) {
+            setItemOrder(parsedOrder);
+            return;
+          }
+        } catch (e) {
+          console.warn('Failed to parse saved item order:', e);
+        }
+      }
+      // Fall back to default order if no valid saved order
+      setItemOrder(items.map(item => item.id));
+    }
+  }, [items]);
+
+  // Save item order to localStorage whenever it changes
+  useEffect(() => {
+    if (itemOrder.length > 0) {
+      localStorage.setItem('darkhorse-items-order', JSON.stringify(itemOrder));
+    }
+  }, [itemOrder]);
+
+  // Function to reset item order to default
+  const resetItemOrder = () => {
+    if (items && items.length > 0) {
+      const defaultOrder = items.map(item => item.id);
+      setItemOrder(defaultOrder);
+      localStorage.removeItem('darkhorse-items-order');
+      toast({
+        title: "Order Reset",
+        description: "Item order has been reset to default.",
+      });
+    }
+  };
+
   // Get unique categories from items
   const availableCategories = useMemo(() => {
+    if (!items || items.length === 0) return [];
     const categories = new Set(items.map(item => item.category));
-    return Array.from(categories);
+    return Array.from(categories) as string[];
   }, [items]);
 
   // Apply all filters and sorting
   const filteredAndSortedItems = useMemo(() => {
-    let filtered = items;
+    let filtered = items || [];
 
     // Apply search filter
     if (searchTerm) {
@@ -114,120 +170,244 @@ export function Items() {
     if (advancedFilters.dateRange.from || advancedFilters.dateRange.to) {
       filtered = filtered.filter(item => {
         const itemDate = new Date(item.lastSeen);
-        const fromDate = advancedFilters.dateRange.from;
-        const toDate = advancedFilters.dateRange.to;
-        
-        if (fromDate && itemDate < fromDate) return false;
-        if (toDate && itemDate > toDate) return false;
+        if (advancedFilters.dateRange.from && itemDate < advancedFilters.dateRange.from) return false;
+        if (advancedFilters.dateRange.to && itemDate > advancedFilters.dateRange.to) return false;
         return true;
       });
     }
 
     // Apply sorting
     filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
+      let aValue: any, bValue: any;
+      
       switch (advancedFilters.sortBy) {
-        case "name":
+        case 'name':
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
           break;
-        case "category":
+        case 'category':
           aValue = a.category.toLowerCase();
           bValue = b.category.toLowerCase();
           break;
-        case "status":
+        case 'status':
           aValue = a.status;
           bValue = b.status;
           break;
-        case "lastSeen":
+        case 'lastSeen':
           aValue = new Date(a.lastSeen);
           bValue = new Date(b.lastSeen);
-          break;
-        case "essential":
-          aValue = a.isEssential ? 1 : 0;
-          bValue = b.isEssential ? 1 : 0;
           break;
         default:
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
       }
 
-      if (aValue < bValue) return advancedFilters.sortOrder === "asc" ? -1 : 1;
-      if (aValue > bValue) return advancedFilters.sortOrder === "asc" ? 1 : -1;
-      return 0;
+      if (advancedFilters.sortOrder === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
     });
 
     return filtered;
   }, [items, searchTerm, advancedFilters]);
 
-  const totalPages = Math.ceil(filteredAndSortedItems.length / itemsPerPage);
+  // Get items in current order for display
+  const currentItemsInOrder = useMemo(() => {
+    if (!filteredAndSortedItems || filteredAndSortedItems.length === 0) return [];
+    
+    // If we have a custom order, use it; otherwise use the filtered items
+    if (itemOrder.length > 0) {
+      const orderedItems = [];
+      const itemMap = new Map(filteredAndSortedItems.map(item => [item.id, item]));
+      
+      // Add items in the custom order
+      for (const id of itemOrder) {
+        if (itemMap.has(id)) {
+          orderedItems.push(itemMap.get(id)!);
+        }
+      }
+      
+      // Add any remaining items that weren't in the order
+      for (const item of filteredAndSortedItems) {
+        if (!itemOrder.includes(item.id)) {
+          orderedItems.push(item);
+        }
+      }
+      
+      return orderedItems;
+    }
+    
+    return filteredAndSortedItems;
+  }, [filteredAndSortedItems, itemOrder]);
+
+  // Pagination
+  const totalPages = Math.ceil(currentItemsInOrder.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedItems = filteredAndSortedItems.slice(startIndex, startIndex + itemsPerPage);
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = currentItemsInOrder.slice(startIndex, endIndex);
 
-  const toggleItemSelection = (itemId: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) 
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
+  // NOW WE CAN HAVE CONDITIONAL RENDERING AFTER ALL HOOKS ARE CALLED
+
+  // Authentication check - ensure user is fully loaded
+  if (!user || !user.uid) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+            <p className="text-muted-foreground">Please log in to view your items.</p>
+          </div>
+        </div>
+      </AppLayout>
     );
-  };
+  }
 
-  const toggleAllItems = () => {
-    setSelectedItems(prev => 
-      prev.length === paginatedItems.length 
-        ? []
-        : paginatedItems.map(item => item.id)
+  // Loading state - ensure we have both user and items loaded
+  if (loading || !items) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <div className="h-8 bg-muted rounded w-48"></div>
+            <div className="h-4 bg-muted rounded w-64"></div>
+          </div>
+          
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="p-4 sm:p-6 space-y-4">
+                <div className="h-4 bg-muted rounded w-24"></div>
+                <div className="h-8 bg-muted rounded w-16"></div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </AppLayout>
     );
-  };
+  }
 
-  const handleEdit = (item: any) => {
-    setEditingItem(item);
-    setIsEditModalOpen(true);
-    announceToScreenReader(`Editing item: ${item.name}`);
-  };
+  // Error state
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center max-w-md">
+            <h2 className="text-2xl font-bold text-destructive mb-2">Error loading data</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
-  const handleCreate = () => {
-    setEditingItem(null);
-    setIsCreateModalOpen(true);
-    announceToScreenReader("Creating new item");
-  };
+  // Ensure we have items to display
+  if (!items || items.length === 0) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          {/* Clean Tech Header */}
+          <div className="border-b border-border pb-6 w-full">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-slate-100 rounded-lg flex-shrink-0">
+                <Package className="h-6 w-6 text-slate-700" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl md:text-3xl font-bold text-foreground break-words">RFID Items Management</h1>
+                <p className="text-muted-foreground text-base md:text-lg break-words">
+                  Track, organize, and manage all your RFID-tagged items
+                </p>
+              </div>
+            </div>
+          </div>
 
-  const handleView = (item: any) => {
-    toast({
-      title: "Item Details",
-      description: `Viewing details for ${item.name}`,
-    });
+          {/* Empty State */}
+          <Card className="p-12 text-center border border-border">
+            <div className="mx-auto w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center mb-6">
+              <Package className="h-8 w-8 text-slate-600" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">No RFID Items Found</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              You don't have any RFID items yet. Create your first item to get started with tracking and management.
+            </p>
+            <Button 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create First Item
+            </Button>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Event handlers
+  const handleViewItem = (item: any) => {
+    setViewingItem(item);
+    setIsViewModalOpen(true);
     announceToScreenReader(`Viewing details for ${item.name}`);
   };
 
-  const handleDelete = (itemId: string) => {
-    const item = items.find(i => i.id === itemId);
-    setItems(prev => prev.filter(item => item.id !== itemId));
-    setSelectedItems(prev => prev.filter(id => id !== itemId));
-    toast({
-      title: "Item Deleted",
-      description: "Item has been deleted successfully.",
-    });
-    announceToScreenReader(`Item ${item?.name || 'deleted'} successfully`);
+  const handleEditItem = (item: any) => {
+    setEditingItem(item);
+    setIsEditModalOpen(true);
+    announceToScreenReader(`Editing ${item.name}`);
   };
 
-  const handleSaveItem = (item: any) => {
-    if (editingItem) {
-      // Update existing item
-      setItems(prev => prev.map(existingItem => 
-        existingItem.id === item.id ? item : existingItem
-      ));
-      announceToScreenReader(`Item ${item.name} updated successfully`);
-    } else {
-      // Create new item
-      setItems(prev => [...prev, item]);
-      announceToScreenReader(`Item ${item.name} created successfully`);
+  const handleDelete = async (itemId: string) => {
+    try {
+      const item = items.find(i => i.id === itemId);
+      await deleteItem(itemId);
+      setSelectedItems(prev => prev.filter(id => id !== itemId));
+      toast({
+        title: "Item Deleted",
+        description: "Item has been deleted successfully.",
+      });
+      announceToScreenReader(`Item ${item?.name || 'deleted'} successfully`);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete item. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleSaveItem = async (item: any) => {
+    try {
+      if (editingItem) {
+        // Update existing item
+        await updateItem(item.id, item);
+        announceToScreenReader(`Item ${item.name} updated successfully`);
+      } else {
+        // Create new item - ensure all required fields are present
+        const newItem = {
+          name: item.name,
+          description: item.description || "",
+          rfid: item.rfid || `RFID-${Math.random().toString(36).substr(2, 9)}`,
+          category: item.category || "electronics",
+          isEssential: item.isEssential || false,
+          status: item.status || "missing" as const,
+          lastSeen: new Date().toISOString(),
+        };
+        
+        console.log('Creating new item:', newItem); // Debug log
+        await addItem(newItem);
+        announceToScreenReader(`Item ${item.name} created successfully`);
+      }
+    } catch (error) {
+      console.error('Error saving item:', error); // Debug log
+      toast({
+        title: "Error",
+        description: "Failed to save item. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
     if (selectedItems.length === 0) {
       toast({
         title: "No Items Selected",
@@ -238,13 +418,24 @@ export function Items() {
       return;
     }
 
-    setItems(prev => prev.filter(item => !selectedItems.includes(item.id)));
-    setSelectedItems([]);
-    toast({
-      title: "Items Deleted",
-      description: `${selectedItems.length} items have been deleted.`,
-    });
-    announceToScreenReader(`${selectedItems.length} items deleted successfully`);
+    try {
+      // Delete items one by one (Firebase doesn't support bulk delete in the free tier)
+      for (const itemId of selectedItems) {
+        await deleteItem(itemId);
+      }
+      setSelectedItems([]);
+      toast({
+        title: "Items Deleted",
+        description: `${selectedItems.length} items have been deleted.`,
+      });
+      announceToScreenReader(`${selectedItems.length} items deleted successfully`);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete some items. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle drag end for reordering
@@ -252,20 +443,18 @@ export function Items() {
     const { active, over } = event;
 
     if (active.id !== over?.id) {
-      setItems((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over?.id);
-
-        const newItems = arrayMove(items, oldIndex, newIndex);
-        
+      const oldIndex = itemOrder.indexOf(active.id as string);
+      const newIndex = itemOrder.indexOf(over?.id as string);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove(itemOrder, oldIndex, newIndex);
+        setItemOrder(newOrder);
         toast({
-          title: "Items Reordered",
-          description: "Item order has been updated successfully.",
+          title: "Item Reordered",
+          description: "Item order has been updated.",
         });
-
-        announceToScreenReader("Items reordered successfully");
-        return newItems;
-      });
+        announceToScreenReader("Item reordered successfully");
+      }
     }
   };
 
@@ -282,180 +471,383 @@ export function Items() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Items Management</h1>
-          <p className="text-muted-foreground">Detailed view of all tracked items</p>
+      <div className="space-y-6 w-full">
+        {/* Clean Tech Header */}
+        <div className="border-b border-border pb-6 w-full">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-slate-100 rounded-lg flex-shrink-0">
+              <Package className="h-6 w-6 text-slate-700" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground break-words">RFID Items Management</h1>
+              <p className="text-muted-foreground text-base md:text-lg break-words">
+                Track, organize, and manage all your RFID-tagged items
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards - Constrained Width */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full">
+          <Card className="p-4 md:p-6 border border-border bg-card w-full">
+            <div className="flex items-center gap-3 w-full">
+              <div className="p-2 bg-slate-100 rounded-lg flex-shrink-0">
+                <Package className="h-4 w-4 md:h-5 md:w-5 text-slate-700" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm text-muted-foreground">Total Items</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground truncate">{items.length}</p>
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="p-4 md:p-6 border border-border bg-card w-full">
+            <div className="flex items-center gap-3 w-full">
+              <div className="p-2 bg-slate-100 rounded-lg flex-shrink-0">
+                <Target className="h-4 w-4 md:h-5 md:w-5 text-slate-700" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm text-muted-foreground">Detected</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground truncate">{items.filter(i => i.status === 'detected').length}</p>
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="p-4 md:p-6 border border-border bg-card w-full">
+            <div className="flex items-center gap-3 w-full">
+              <div className="p-2 bg-slate-100 rounded-lg flex-shrink-0">
+                <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-slate-700" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm text-muted-foreground">Missing</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground truncate">{items.filter(i => i.status === 'missing').length}</p>
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="p-4 md:p-6 border border-border bg-card w-full">
+            <div className="flex items-center gap-3 w-full">
+              <div className="p-2 bg-slate-100 rounded-lg flex-shrink-0">
+                <Zap className="h-4 w-4 md:h-5 md:w-5 text-slate-700" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm text-muted-foreground">Essential</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground truncate">{items.filter(i => i.isEssential).length}</p>
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* Advanced Filters */}
-        <AdvancedFilters
-          onFiltersChange={handleFiltersChange}
-          currentFilters={advancedFilters}
-          availableCategories={availableCategories}
-        />
+        <div className="w-full">
+          <AdvancedFilters
+            onFiltersChange={handleFiltersChange}
+            currentFilters={advancedFilters}
+            availableCategories={availableCategories}
+          />
+        </div>
 
-        {/* Search */}
-        <Card className="p-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" aria-hidden="true" />
-            <Input
-              placeholder="Search items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-              aria-label={getAriaLabel('search')}
-              aria-describedby="search-description"
-            />
-            <div id="search-description" className="sr-only">
-              {getAriaDescription('searchItems')}
+        {/* Search and Actions - Constrained Width */}
+        <div className="space-y-4 w-full">
+          <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between w-full">
+            <div className="flex-1 w-full">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full"
+                  aria-label={getAriaLabel('search')}
+                />
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0 w-full sm:w-auto">
+              
+              {selectedItems.length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  aria-label={getAriaLabel('delete')}
+                  className="w-full sm:w-auto"
+                >
+                  <Trash className="h-4 w-4 mr-2" />
+                  Delete Selected ({selectedItems.length})
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetItemOrder}
+                className="w-full sm:w-auto"
+                title="Reset item order to default"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Reset Order
+              </Button>
+              <Button
+                onClick={() => setIsCreateModalOpen(true)}
+                aria-label={getAriaLabel('add')}
+                className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Item
+              </Button>
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Results Summary */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {filteredAndSortedItems.length} of {items.length} items
-          </p>
-          {advancedFilters.categories.length > 0 || advancedFilters.statuses.length > 0 || advancedFilters.essentialOnly || advancedFilters.dateRange.from || advancedFilters.dateRange.to ? (
-            <Badge variant="secondary">
-              {filteredAndSortedItems.length} filtered results
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between w-full">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="secondary" className="text-xs">
+              {filteredAndSortedItems.length} of {items.length} items
             </Badge>
-          ) : null}
+            {(advancedFilters.categories.length > 0 || advancedFilters.statuses.length > 0 || advancedFilters.essentialOnly || advancedFilters.dateRange.from || advancedFilters.dateRange.to) && (
+              <Badge variant="outline" className="text-xs">
+                {filteredAndSortedItems.length} filtered results
+              </Badge>
+            )}
+          </div>
+          
+          {searchTerm && (
+            <p className="text-sm text-muted-foreground break-words">
+              Searching for "{searchTerm}"
+            </p>
+          )}
         </div>
 
-        {/* Items Table */}
-        <Card>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox 
-                      checked={selectedItems.length === paginatedItems.length && paginatedItems.length > 0}
-                      onCheckedChange={toggleAllItems}
-                      aria-label="Select all items on this page"
-                    />
-                  </TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead>RFID</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Seen</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={paginatedItems.map(item => item.id)}
-                    strategy={verticalListSortingStrategy}
+        {/* Items Table - Properly Constrained */}
+        <Card className="border border-border w-full">
+          <div className="p-4 md:p-6 w-full">
+            {currentItems.length === 0 ? (
+              <div className="text-center py-8 md:py-12 w-full">
+                <div className="mx-auto w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center mb-6">
+                  <Package className="h-8 w-8 text-slate-600" />
+                </div>
+                <h3 className="text-lg md:text-xl font-semibold mb-2 break-words">
+                  {searchTerm || advancedFilters.categories.length > 0 || advancedFilters.statuses.length > 0
+                    ? "No items match your current filters."
+                    : "No RFID items found"}
+                </h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto text-sm md:text-base break-words">
+                  {searchTerm || advancedFilters.categories.length > 0 || advancedFilters.statuses.length > 0
+                    ? "Try adjusting your search terms or filters to find what you're looking for."
+                    : "Create your first RFID item to get started with tracking and management."}
+                </p>
+                {!searchTerm && advancedFilters.categories.length === 0 && advancedFilters.statuses.length === 0 && (
+                  <Button 
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="bg-primary hover:bg-primary/90"
                   >
-                    {paginatedItems.map((item) => (
-                      <DraggableItemRow
-                        key={item.id}
-                        item={item}
-                        isSelected={selectedItems.includes(item.id)}
-                        onToggleSelection={toggleItemSelection}
-                        onView={handleView}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-                  </SortableContext>
-                </DndContext>
-              </TableBody>
-            </Table>
-          </div>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Item
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Table Container - Responsive table that fits within page margins */}
+                <div className="w-full">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={currentItems.map(item => item.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="w-full overflow-hidden rounded-lg border border-border">
+                        <Table className="w-full table-fixed">
+                          <TableHeader>
+                            <TableRow className="bg-muted/50">
+                              <TableHead className="w-[6%] px-1 text-xs">Select</TableHead>
+                              <TableHead className="w-[6%] px-1 text-xs">Drag</TableHead>
+                              <TableHead className="w-[22%] px-1 text-xs">Name</TableHead>
+                              <TableHead className="w-[12%] px-1 text-xs">RFID</TableHead>
+                              <TableHead className="w-[12%] px-1 text-xs">Category</TableHead>
+                              <TableHead className="w-[15%] px-1 text-xs">Status</TableHead>
+                              <TableHead className="w-[10%] px-1 text-xs">Essential</TableHead>
+                              <TableHead className="w-[12%] px-1 text-xs">Last Seen</TableHead>
+                              <TableHead className="w-[12%] px-1 text-xs">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {currentItems.map((item) => (
+                              <DraggableItemRow
+                                key={item.id}
+                                item={item}
+                                isSelected={selectedItems.includes(item.id)}
+                                onToggleSelection={(itemId) => {
+                                  if (selectedItems.includes(itemId)) {
+                                    setSelectedItems(prev => prev.filter(id => id !== itemId));
+                                  } else {
+                                    setSelectedItems(prev => [...prev, itemId]);
+                                  }
+                                }}
+                                onView={() => handleViewItem(item)}
+                                onEdit={() => handleEditItem(item)}
+                                onDelete={() => handleDelete(item.id)}
+                              />
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                </div>
 
-          {/* Bulk Actions */}
-          {selectedItems.length > 0 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t bg-muted/30">
-              <p className="text-sm text-muted-foreground">
-                {selectedItems.length} item(s) selected
-              </p>
-              <Button 
-                variant="destructive" 
-                size="sm" 
-                onClick={handleBulkDelete}
-                aria-label={`Delete ${selectedItems.length} selected items`}
-              >
-                <Trash className="w-4 h-4 mr-2" />
-                Delete Selected
-              </Button>
-            </div>
-          )}
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredAndSortedItems.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + itemsPerPage, filteredAndSortedItems.length)} of {filteredAndSortedItems.length} items
-            </p>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                disabled={currentPage === 1}
-                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                className="flex items-center gap-1"
-                aria-label="Go to previous page"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground px-2">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                disabled={currentPage === totalPages}
-                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                className="flex items-center gap-1"
-                aria-label="Go to next page"
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between mt-6 pt-6 border-t border-border w-full">
+                    <div className="text-sm text-muted-foreground text-center sm:text-left">
+                      Showing {startIndex + 1} to {Math.min(endIndex, currentItemsInOrder.length)} of {currentItemsInOrder.length} items
+                    </div>
+                    <div className="flex items-center justify-center sm:justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        aria-label={getAriaLabel('button')}
+                        className="hover:bg-muted"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm px-3 py-1 bg-muted rounded border border-border">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        aria-label={getAriaLabel('button')}
+                        className="hover:bg-muted"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </Card>
 
-        {/* Add Item Button */}
-        <div className="flex justify-end">
-          <Button 
-            onClick={handleCreate} 
-            className="flex items-center gap-2"
-            aria-label={getAriaLabel('add')}
-          >
-            <Plus className="w-4 h-4" />
-            Add Item
-          </Button>
-        </div>
-
-        {/* Edit Modal */}
+        {/* Modals */}
         <ItemEditModal
-          item={editingItem}
           isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingItem(null);
+          }}
           onSave={handleSaveItem}
-          onDelete={handleDelete}
+          item={editingItem}
           mode="edit"
         />
 
-        {/* Create Modal */}
         <ItemEditModal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
           onSave={handleSaveItem}
           mode="create"
         />
+
+        {/* Item Detail View Modal */}
+        <Dialog 
+          open={isViewModalOpen} 
+          onOpenChange={(open) => {
+            setIsViewModalOpen(open);
+          }}
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Item Details
+              </DialogTitle>
+            </DialogHeader>
+            {viewingItem ? (
+              <div className="space-y-6">
+                {/* Item Header */}
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-bold text-foreground">{viewingItem.name}</h3>
+                    <p className="text-muted-foreground">{viewingItem.description}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={viewingItem.status === "detected" ? "secondary" : "destructive"}>
+                      {viewingItem.status === "detected" ? "Detected" : "Missing"}
+                    </Badge>
+                    {viewingItem.isEssential && (
+                      <Badge variant="destructive">Essential</Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Item Information Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">RFID Tag</label>
+                    <code className="block w-full p-2 bg-muted rounded font-mono text-sm">
+                      {viewingItem.rfid}
+                    </code>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Category</label>
+                    <Badge variant="outline" className="w-full justify-center">
+                      {viewingItem.category}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Last Seen</label>
+                    <p className="text-sm">
+                      {new Date(viewingItem.lastSeen).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Essential Item</label>
+                    <p className="text-sm">
+                      {viewingItem.isEssential ? "Yes" : "No"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsViewModalOpen(false);
+                      setViewingItem(null);
+                    }}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsViewModalOpen(false);
+                      setViewingItem(null);
+                      setEditingItem(viewingItem);
+                      setIsEditModalOpen(true);
+                    }}
+                  >
+                    Edit Item
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No item data available</p>
+                <p className="text-sm text-muted-foreground">viewingItem is null or undefined</p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

@@ -76,8 +76,8 @@ export function MobileBottomNav({ onNavigate }: MobileBottomNavProps) {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 lg:hidden">
-      <div className="flex items-center justify-around px-2 py-2">
+    <div className="mobile-bottom-nav">
+      <div className="flex items-center justify-around px-2 py-2 mobile-safe-area">
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = activePage === item.id;
@@ -89,10 +89,10 @@ export function MobileBottomNav({ onNavigate }: MobileBottomNavProps) {
               size="sm"
               onClick={() => handleNavigation(item)}
               className={cn(
-                "flex flex-col items-center gap-1 h-auto py-2 px-3 min-w-0 flex-1",
+                "mobile-bottom-nav-item touch-feedback",
                 isActive 
-                  ? "text-primary bg-primary/10" 
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "mobile-bottom-nav-item-active" 
+                  : "mobile-bottom-nav-item-inactive"
               )}
               aria-label={`Navigate to ${item.label}`}
               aria-current={isActive ? "page" : undefined}
@@ -101,7 +101,7 @@ export function MobileBottomNav({ onNavigate }: MobileBottomNavProps) {
                 "w-5 h-5",
                 isActive ? "text-primary" : "text-muted-foreground"
               )} />
-              <span className="text-xs font-medium">{item.label}</span>
+              <span className="text-xs font-medium truncate">{item.label}</span>
             </Button>
           );
         })}

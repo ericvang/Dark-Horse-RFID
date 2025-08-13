@@ -3,7 +3,7 @@ import { Monitor, Package, Bell, BarChart3, Wifi, User, ChevronDown, Settings } 
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserProfileMenu } from "@/components/ui/user-profile-menu";
-import { type User as UserType } from "@/data/mock-data";
+import { type User as UserType } from "@/types";
 import { Package as PackageIcon, Home, Package2, Bell as BellIcon, BarChart3 as BarChartIcon, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAriaLabel, getAriaDescription } from "@/lib/accessibility";
@@ -192,7 +192,7 @@ export function Sidebar({
           aria-label="User profile menu"
         >
           <Avatar className="w-8 h-8">
-            <AvatarImage src={user.avatarUrl} alt={`${user.name} avatar`} />
+            <AvatarImage src={user.avatar} alt={`${user.name} avatar`} />
             <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
               <User className="w-4 h-4" />
             </AvatarFallback>
