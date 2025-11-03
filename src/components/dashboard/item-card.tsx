@@ -50,10 +50,23 @@ export function ItemCard({ item, onViewItem, onEditItem }: ItemCardProps) {
         item.status === "missing" && "bg-warning-muted/30"
       )}
       onClick={handleViewDetails}
+      role="article"
+      aria-label={`Item: ${item.name}, Status: ${item.status}, ${item.isEssential ? 'Essential' : 'Non-essential'}`}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleViewDetails();
+        }
+      }}
     >
       <div className="flex items-start justify-between mb-3">
         {item.isEssential && (
-          <Badge variant="destructive" className="text-xs">
+          <Badge 
+            variant="destructive" 
+            className="text-xs"
+            aria-label="Essential item"
+          >
             Essential
           </Badge>
         )}
@@ -66,8 +79,11 @@ export function ItemCard({ item, onViewItem, onEditItem }: ItemCardProps) {
               ? "bg-success-muted text-success border-success/20" 
               : "bg-warning-muted text-warning border-warning/20"
           )}
+          role="status"
+          aria-label={`Item status: ${item.status === "detected" ? "Detected" : "Missing"}`}
         >
-          <StatusIcon className="w-3 h-3" />
+          <StatusIcon className="w-3 h-3" aria-hidden="true" />
+          <span className="sr-only">Status: </span>
           {item.status === "detected" ? "Detected" : "Missing"}
         </Badge>
       </div>
@@ -80,22 +96,24 @@ export function ItemCard({ item, onViewItem, onEditItem }: ItemCardProps) {
           <Badge 
             variant="outline" 
             className={cn("text-xs", categoryColors[item.category] || "bg-gray-100 text-gray-800")}
+            aria-label={`Category: ${item.category}`}
           >
             {item.category}
           </Badge>
           
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="w-3 h-3" />
-            {item.lastSeen}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground" aria-label={`Last seen: ${item.lastSeen}`}>
+            <Clock className="w-3 h-3" aria-hidden="true" />
+            <time dateTime={item.lastSeen}>{item.lastSeen}</time>
           </div>
         </div>
         
-        <p className="text-xs text-muted-foreground font-mono">
+        <p className="text-xs text-muted-foreground font-mono" aria-label={`RFID tag: ${item.rfid}`}>
+          <span className="sr-only">RFID tag: </span>
           RFID: {item.rfid}
         </p>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+        <div className="flex items-center gap-2 pt-2 border-t border-border/50" role="group" aria-label="Item actions">
           <Button 
             variant="ghost" 
             size="sm" 
@@ -104,8 +122,9 @@ export function ItemCard({ item, onViewItem, onEditItem }: ItemCardProps) {
               handleViewDetails();
             }}
             className="flex items-center gap-1 text-xs h-7 px-2"
+            aria-label={`View details for ${item.name}`}
           >
-            <Eye className="w-3 h-3" />
+            <Eye className="w-3 h-3" aria-hidden="true" />
             View
           </Button>
           <Button 
@@ -116,8 +135,9 @@ export function ItemCard({ item, onViewItem, onEditItem }: ItemCardProps) {
               handleEditItem();
             }}
             className="flex items-center gap-1 text-xs h-7 px-2"
+            aria-label={`Edit ${item.name}`}
           >
-            <Edit className="w-3 h-3" />
+            <Edit className="w-3 h-3" aria-hidden="true" />
             Edit
           </Button>
         </div>

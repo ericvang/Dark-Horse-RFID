@@ -2,22 +2,73 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dark Horse Radar - Smart Bag Management</title>
-    <meta name="description" content="A modern bag tracking and management application" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    
+    <!-- Primary Meta Tags -->
+    <title>Dark Horse Radar - Smart RFID Bag Management System</title>
+    <meta name="title" content="Dark Horse Radar - Smart RFID Bag Management System" />
+    <meta name="description" content="A modern, accessible bag tracking and management application with RFID technology. Track, organize, and manage your belongings with real-time monitoring." />
     <meta name="author" content="Dark Horse Radar Team" />
-
-    <meta property="og:title" content="Bag Radar - Smart Bag Management" />
-    <meta property="og:description" content="A modern bag tracking and management application" />
+    <meta name="keywords" content="RFID, bag tracking, item management, accessibility, smart tracking" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#1e293b" />
+    
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
+    <meta property="og:title" content="Dark Horse Radar - Smart Bag Management" />
+    <meta property="og:description" content="A modern bag tracking and management application with RFID technology" />
+    <meta property="og:site_name" content="Dark Horse Radar" />
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Bag Radar - Smart Bag Management" />
-    <meta name="twitter:description" content="A modern bag tracking and management application" />
+    <meta name="twitter:title" content="Dark Horse Radar - Smart Bag Management" />
+    <meta name="twitter:description" content="A modern bag tracking and management application with RFID technology" />
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    
+    <!-- Accessibility: Skip to main content link -->
+    <style>
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: #000;
+        color: #fff;
+        padding: 8px;
+        text-decoration: none;
+        z-index: 100;
+      }
+      .skip-link:focus {
+        top: 0;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <!-- Skip to main content link for keyboard navigation -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- Screen reader announcements region -->
+    <div id="sr-announcements" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+    
+    <div id="root" role="application" aria-label="Dark Horse Radar Application">
+      <!-- Loading state for screen readers -->
+      <div id="loading-indicator" aria-live="polite" aria-busy="true" class="sr-only">Loading application...</div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

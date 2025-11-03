@@ -473,9 +473,9 @@ export function Items() {
     <AppLayout>
       <div className="space-y-6 w-full">
         {/* Clean Tech Header */}
-        <div className="border-b border-border pb-6 w-full">
+        <header className="border-b border-border pb-6 w-full" role="banner">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-slate-100 rounded-lg flex-shrink-0">
+            <div className="p-2 bg-slate-100 rounded-lg flex-shrink-0" aria-hidden="true">
               <Package className="h-6 w-6 text-slate-700" />
             </div>
             <div className="min-w-0 flex-1">
@@ -485,7 +485,7 @@ export function Items() {
               </p>
             </div>
           </div>
-        </div>
+        </header>
 
         {/* Stats Cards - Constrained Width */}
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full">

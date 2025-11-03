@@ -8,36 +8,40 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
+  // ALL HOOKS MUST BE CALLED FIRST, BEFORE ANY CONDITIONAL LOGIC
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
+  // Redirect to login if user is not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/login');
+    }
+  }, [user, loading, navigate]);
+
+  // NOW WE CAN HAVE CONDITIONAL RENDERING AFTER ALL HOOKS ARE CALLED
+  
   // Show loading skeleton while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-8">
+      <div className="min-h-screen bg-background p-8" role="status" aria-live="polite" aria-label="Loading authentication">
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-8 w-48" aria-hidden="true" />
+            <Skeleton className="h-10 w-32" aria-hidden="true" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
+            <Skeleton className="h-32" aria-hidden="true" />
+            <Skeleton className="h-32" aria-hidden="true" />
+            <Skeleton className="h-32" aria-hidden="true" />
+            <Skeleton className="h-32" aria-hidden="true" />
           </div>
-          <Skeleton className="h-96" />
+          <Skeleton className="h-96" aria-hidden="true" />
         </div>
+        <span className="sr-only">Loading, please wait...</span>
       </div>
     );
   }
-
-  // Redirect to login if user is not authenticated
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-    }
-  }, [user, navigate]);
 
   // Don't render anything while redirecting
   if (!user) {

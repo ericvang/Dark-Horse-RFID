@@ -156,7 +156,7 @@ export function IndexFirebase() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-6" role="region" aria-label="Dashboard content">
         {/* Header with Scan Functionality */}
         <Header 
           lastScanTimestamp={new Date().toISOString()}
@@ -165,16 +165,20 @@ export function IndexFirebase() {
         />
 
         {/* Stats Cards */}
-        <StatCards stats={stats} />
+        <section aria-label="Statistics overview">
+          <StatCards stats={stats} />
+        </section>
         
         {/* Alert Banner for Missing Items */}
         {stats.essentialMissing > 0 && (
-          <AlertBanner
-            totalItems={stats.totalItems}
-            detectedCount={stats.detected}
-            essentialMissingItems={missingItems.essentialMissing}
-            otherMissingItems={missingItems.otherMissing}
-          />
+          <section aria-label="Alerts and warnings" role="alert">
+            <AlertBanner
+              totalItems={stats.totalItems}
+              detectedCount={stats.detected}
+              essentialMissingItems={missingItems.essentialMissing}
+              otherMissingItems={missingItems.otherMissing}
+            />
+          </section>
         )}
 
         {/* Search and Filter Bar */}
@@ -185,76 +189,105 @@ export function IndexFirebase() {
         />
         
         {/* Items Grid */}
-        <ItemGrid 
-          items={filteredItems}
-          searchQuery={searchQuery}
-          onViewItem={handleViewItem}
-          onEditItem={handleEditItem}
-        />
+        <section 
+          aria-label={`Items list: ${filteredItems.length} item${filteredItems.length !== 1 ? 's' : ''} displayed`}
+          aria-live="polite"
+          aria-atomic="false"
+        >
+          <ItemGrid 
+            items={filteredItems}
+            searchQuery={searchQuery}
+            onViewItem={handleViewItem}
+            onEditItem={handleEditItem}
+          />
+        </section>
 
         {/* Item View Modal */}
         <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent 
+            className="max-w-2xl"
+            aria-labelledby="item-details-title"
+            aria-describedby="item-details-description"
+            role="dialog"
+          >
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
+              <DialogTitle id="item-details-title" className="flex items-center gap-2">
+                <Package className="h-5 w-5" aria-hidden="true" />
                 Item Details
               </DialogTitle>
+              <p id="item-details-description" className="sr-only">
+                Detailed information about {selectedItem?.name || 'the selected item'}
+              </p>
             </DialogHeader>
             {selectedItem ? (
-              <div className="space-y-6">
+              <div className="space-y-6" role="document">
                 {/* Item Header */}
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
                     <h3 className="text-2xl font-bold text-foreground">{selectedItem.name}</h3>
                     <p className="text-muted-foreground">{selectedItem.description}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={selectedItem.status === "detected" ? "secondary" : "destructive"}>
+                  <div className="flex items-center gap-2" role="group" aria-label="Item status indicators">
+                    <Badge 
+                      variant={selectedItem.status === "detected" ? "secondary" : "destructive"}
+                      role="status"
+                      aria-label={`Status: ${selectedItem.status === "detected" ? "Detected" : "Missing"}`}
+                    >
                       {selectedItem.status === "detected" ? "Detected" : "Missing"}
                     </Badge>
                     {selectedItem.isEssential && (
-                      <Badge variant="destructive">Essential</Badge>
+                      <Badge variant="destructive" aria-label="Essential item">Essential</Badge>
                     )}
                   </div>
                 </div>
 
                 {/* Item Information Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">RFID Tag</label>
-                    <code className="block w-full p-2 bg-muted rounded font-mono text-sm">
-                      {selectedItem.rfid}
-                    </code>
+                <dl className="grid grid-cols-2 gap-4" role="list">
+                  <div className="space-y-2" role="listitem">
+                    <dt className="text-sm font-medium text-muted-foreground">RFID Tag</dt>
+                    <dd>
+                      <code className="block w-full p-2 bg-muted rounded font-mono text-sm" aria-label={`RFID tag: ${selectedItem.rfid}`}>
+                        {selectedItem.rfid}
+                      </code>
+                    </dd>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Category</label>
-                    <Badge variant="outline" className="w-full justify-center">
-                      {selectedItem.category}
-                    </Badge>
+                  <div className="space-y-2" role="listitem">
+                    <dt className="text-sm font-medium text-muted-foreground">Category</dt>
+                    <dd>
+                      <Badge variant="outline" className="w-full justify-center" aria-label={`Category: ${selectedItem.category}`}>
+                        {selectedItem.category}
+                      </Badge>
+                    </dd>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Last Seen</label>
-                    <p className="text-sm">
-                      {new Date(selectedItem.lastSeen).toLocaleString()}
-                    </p>
+                  <div className="space-y-2" role="listitem">
+                    <dt className="text-sm font-medium text-muted-foreground">Last Seen</dt>
+                    <dd>
+                      <time 
+                        dateTime={selectedItem.lastSeen} 
+                        className="text-sm"
+                        aria-label={`Last seen: ${new Date(selectedItem.lastSeen).toLocaleString()}`}
+                      >
+                        {new Date(selectedItem.lastSeen).toLocaleString()}
+                      </time>
+                    </dd>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Essential Item</label>
-                    <p className="text-sm">
+                  <div className="space-y-2" role="listitem">
+                    <dt className="text-sm font-medium text-muted-foreground">Essential Item</dt>
+                    <dd className="text-sm" aria-label={`Essential item: ${selectedItem.isEssential ? "Yes" : "No"}`}>
                       {selectedItem.isEssential ? "Yes" : "No"}
-                    </p>
+                    </dd>
                   </div>
-                </div>
+                </dl>
 
                 {/* Action Buttons */}
-                <div className="flex justify-end gap-2 pt-4 border-t">
+                <div className="flex justify-end gap-2 pt-4 border-t" role="group" aria-label="Item actions">
                   <Button
                     variant="outline"
                     onClick={() => {
                       setIsViewModalOpen(false);
                       setSelectedItem(null);
                     }}
+                    aria-label="Close item details dialog"
                   >
                     Close
                   </Button>
@@ -264,6 +297,7 @@ export function IndexFirebase() {
                       setIsViewModalOpen(false);
                       setIsEditModalOpen(true);
                     }}
+                    aria-label={`Edit ${selectedItem.name}`}
                   >
                     Edit Item
                   </Button>

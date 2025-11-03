@@ -79,24 +79,38 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex" role="application" aria-label="Dark Horse Radar Application">
       {/* Mobile Overlay */}
       {isMobile && isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity duration-300"
           onClick={() => setIsSidebarOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setIsSidebarOpen(false);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Close sidebar overlay"
+          aria-hidden={!isSidebarOpen}
         />
       )}
 
-      {/* Sidebar */}
-      <div className={`
-        ${isMobile 
-          ? `fixed left-0 top-0 h-full z-50 transform transition-all duration-300 ease-in-out ${
-              isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
-            }`
-          : 'fixed left-0 top-0 h-full z-50'
-        }
-      `}>
+      {/* Sidebar Navigation */}
+      <nav 
+        className={`
+          ${isMobile 
+            ? `fixed left-0 top-0 h-full z-50 transform transition-all duration-300 ease-in-out ${
+                isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+              }`
+            : 'fixed left-0 top-0 h-full z-50'
+          }
+        `}
+        role="navigation"
+        aria-label="Main navigation"
+        aria-hidden={isMobile && !isSidebarOpen}
+      >
         <Sidebar 
           systemStatus="active" 
           activePage={getActivePage()}
@@ -119,32 +133,42 @@ export function AppLayout({ children }: AppLayoutProps) {
           onAccountSettings={() => setIsAccountModalOpen(true)}
           onLogout={() => setIsLoggedIn(false)}
         />
-      </div>
+      </nav>
       
       {/* Main Content */}
-      <main className={`
-        flex-1 transition-all duration-300 ease-in-out
-        ${isMobile 
-          ? 'ml-0 p-4 mobile-bottom-nav-spacing' 
-          : 'ml-64 p-8'
-        }
-      `}>
+      <main 
+        id="main-content"
+        className={`
+          flex-1 transition-all duration-300 ease-in-out
+          ${isMobile 
+            ? 'ml-0 p-4 mobile-bottom-nav-spacing' 
+            : 'ml-64 p-8'
+          }
+        `}
+        role="main"
+        aria-label="Main content"
+      >
         {/* Mobile Header */}
         {isMobile && (
-          <div className="mobile-header-spacing mb-6">
+          <header className="mobile-header-spacing mb-6" role="banner">
             <div className="flex items-center justify-between">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsSidebarOpen(true)}
                 className="mobile-touch-target"
+                aria-label="Open navigation menu"
+                aria-expanded={isSidebarOpen}
+                aria-controls="sidebar-navigation"
+                id="menu-toggle-button"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-5 h-5" aria-hidden="true" />
+                <span className="sr-only">Open navigation menu</span>
               </Button>
               <h1 className="text-lg font-semibold">Dark Horse Radar</h1>
-              <div className="w-10" /> {/* Spacer for centering */}
+              <div className="w-10" aria-hidden="true" /> {/* Spacer for centering */}
             </div>
-          </div>
+          </header>
         )}
         
         {/* Page Content with Smooth Transitions */}
@@ -155,9 +179,14 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Mobile Bottom Navigation */}
       {isMobile && (
-        <MobileBottomNav
-          onNavigate={handleNavigate}
-        />
+        <nav 
+          role="navigation"
+          aria-label="Bottom navigation"
+        >
+          <MobileBottomNav
+            onNavigate={handleNavigate}
+          />
+        </nav>
       )}
 
       {/* Modals */}
